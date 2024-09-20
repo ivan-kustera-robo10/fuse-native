@@ -390,15 +390,15 @@ class Fuse extends Nanoresource {
     })
   }
 
-  _op_statfs (signal, path) {
-    this.ops.statfs(path, (err, statfs) => {
+  _op_statfs (signal, path, ctx) {
+    this.ops.statfs(path, { ctx }, (err, statfs) => {
       if (err) return signal(err)
       const arr = getStatfsArray(statfs)
       return signal(0, arr)
     })
   }
 
-  _op_getattr (signal, path) {
+  _op_getattr (signal, path, ctx) {
     if (!this.ops.getattr) {
       if (path !== '/') {
         signal(Fuse.EPERM)
@@ -408,13 +408,13 @@ class Fuse extends Nanoresource {
       return
     }
 
-    this.ops.getattr(path, (err, stat) => {
+    this.ops.getattr(path, { ctx }, (err, stat) => {
       if (err) return signal(err, getStatArray())
       return signal(0, getStatArray(stat))
     })
   }
 
-  _op_fgetattr (signal, path, fd) {
+  _op_fgetattr (signal, path, fd, ctx) {
     if (!this.ops.fgetattr) {
       if (path !== '/') {
         signal(Fuse.EPERM)
@@ -423,84 +423,84 @@ class Fuse extends Nanoresource {
       }
       return
     }
-    this.ops.getattr(path, (err, stat) => {
+    this.ops.getattr(path, { ctx }, (err, stat) => {
       if (err) return signal(err)
       return signal(0, getStatArray(stat))
     })
   }
 
-  _op_access (signal, path, mode) {
-    this.ops.access(path, mode, err => {
+  _op_access (signal, path, mode, ctx) {
+    this.ops.access(path, mode, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_open (signal, path, flags) {
-    this.ops.open(path, flags, (err, fd) => {
+  _op_open (signal, path, flags, ctx) {
+    this.ops.open(path, flags, { ctx }, (err, fd) => {
       return signal(err, fd)
     })
   }
 
-  _op_opendir (signal, path, flags) {
-    this.ops.opendir(path, flags, (err, fd) => {
+  _op_opendir (signal, path, flags, ctx) {
+    this.ops.opendir(path, flags, { ctx }, (err, fd) => {
       return signal(err, fd)
     })
   }
 
-  _op_create (signal, path, mode) {
-    this.ops.create(path, mode, (err, fd) => {
+  _op_create (signal, path, mode, ctx) {
+    this.ops.create(path, mode, { ctx }, (err, fd) => {
       return signal(err, fd)
     })
   }
 
-  _op_utimens (signal, path, atimeLow, atimeHigh, mtimeLow, mtimeHigh) {
+  _op_utimens (signal, path, atimeLow, atimeHigh, mtimeLow, mtimeHigh, ctx) {
     const atime = getDoubleArg(atimeLow, atimeHigh)
     const mtime = getDoubleArg(mtimeLow, mtimeHigh)
-    this.ops.utimens(path, atime, mtime, err => {
+    this.ops.utimens(path, atime, mtime, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_release (signal, path, fd) {
-    this.ops.release(path, fd, err => {
+  _op_release (signal, path, fd, ctx) {
+    this.ops.release(path, fd, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_releasedir (signal, path, fd) {
-    this.ops.releasedir(path, fd, err => {
+  _op_releasedir (signal, path, fd, ctx) {
+    this.ops.releasedir(path, fd, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_read (signal, path, fd, buf, len, offsetLow, offsetHigh) {
-    this.ops.read(path, fd, buf, len, getDoubleArg(offsetLow, offsetHigh), (err, bytesRead) => {
+  _op_read (signal, path, fd, buf, len, offsetLow, offsetHigh, ctx) {
+    this.ops.read(path, fd, buf, len, getDoubleArg(offsetLow, offsetHigh), { ctx }, (err, bytesRead) => {
       return signal(err, bytesRead || 0, buf.buffer)
     })
   }
 
-  _op_write (signal, path, fd, buf, len, offsetLow, offsetHigh) {
-    this.ops.write(path, fd, buf, len, getDoubleArg(offsetLow, offsetHigh), (err, bytesWritten) => {
+  _op_write (signal, path, fd, buf, len, offsetLow, offsetHigh, ctx) {
+    this.ops.write(path, fd, buf, len, getDoubleArg(offsetLow, offsetHigh), { ctx }, (err, bytesWritten) => {
       return signal(err, bytesWritten || 0, buf.buffer)
     })
   }
 
-  _op_readdir (signal, path) {
-    this.ops.readdir(path, (err, names, stats) => {
+  _op_readdir (signal, path, ctx) {
+    this.ops.readdir(path, { ctx }, (err, names, stats) => {
       if (err) return signal(err)
       if (stats) stats = stats.map(getStatArray)
       return signal(0, names, stats || [])
     })
   }
 
-  _op_setxattr (signal, path, name, value, position, flags) {
-    this.ops.setxattr(path, name, value, position, flags, err => {
+  _op_setxattr (signal, path, name, value, position, flags, ctx) {
+    this.ops.setxattr(path, name, value, position, flags, { ctx }, err => {
       return signal(err, value.buffer)
     })
   }
 
-  _op_getxattr (signal, path, name, valueBuf, position) {
-    this.ops.getxattr(path, name, position, (err, value) => {
+  _op_getxattr (signal, path, name, valueBuf, position, ctx) {
+    this.ops.getxattr(path, name, position, { ctx }, (err, value) => {
       if (!err) {
         if (!value) return signal(IS_OSX ? -93 : -61, valueBuf.buffer)
         value.copy(valueBuf)
@@ -510,8 +510,8 @@ class Fuse extends Nanoresource {
     })
   }
 
-  _op_listxattr (signal, path, listBuf) {
-    this.ops.listxattr(path, (err, list) => {
+  _op_listxattr (signal, path, listBuf, ctx) {
+    this.ops.listxattr(path, { ctx }, (err, list) => {
       if (list && !err) {
         if (!listBuf.length) {
           let size = 0
@@ -533,100 +533,100 @@ class Fuse extends Nanoresource {
     })
   }
 
-  _op_removexattr (signal, path, name) {
-    this.ops.removexattr(path, name, err => {
+  _op_removexattr (signal, path, name, ctx) {
+    this.ops.removexattr(path, name, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_flush (signal, path, fd) {
-    this.ops.flush(path, fd, err => {
+  _op_flush (signal, path, fd, ctx) {
+    this.ops.flush(path, fd, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_fsync (signal, path, datasync, fd) {
-    this.ops.fsync(path, datasync, fd, err => {
+  _op_fsync (signal, path, datasync, fd, ctx) {
+    this.ops.fsync(path, datasync, fd, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_fsyncdir (signal, path, datasync, fd) {
-    this.ops.fsyncdir(path, datasync, fd, err => {
+  _op_fsyncdir (signal, path, datasync, fd, ctx) {
+    this.ops.fsyncdir(path, datasync, fd, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_truncate (signal, path, sizeLow, sizeHigh) {
+  _op_truncate (signal, path, sizeLow, sizeHigh, ctx) {
     const size = getDoubleArg(sizeLow, sizeHigh)
-    this.ops.truncate(path, size, err => {
+    this.ops.truncate(path, size, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_ftruncate (signal, path, fd, sizeLow, sizeHigh) {
+  _op_ftruncate (signal, path, fd, sizeLow, sizeHigh, ctx) {
     const size = getDoubleArg(sizeLow, sizeHigh)
-    this.ops.ftruncate(path, fd, size, err => {
+    this.ops.ftruncate(path, fd, size, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_readlink (signal, path) {
-    this.ops.readlink(path, (err, linkname) => {
+  _op_readlink (signal, path, ctx) {
+    this.ops.readlink(path, { ctx }, (err, linkname) => {
       return signal(err, linkname)
     })
   }
 
-  _op_chown (signal, path, uid, gid) {
-    this.ops.chown(path, uid, gid, err => {
+  _op_chown (signal, path, uid, gid, ctx) {
+    this.ops.chown(path, uid, gid, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_chmod (signal, path, mode) {
-    this.ops.chmod(path, mode, err => {
+  _op_chmod (signal, path, mode, ctx) {
+    this.ops.chmod(path, mode, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_mknod (signal, path, mode, dev) {
-    this.ops.mknod(path, mode, dev, err => {
+  _op_mknod (signal, path, mode, dev, ctx) {
+    this.ops.mknod(path, mode, dev, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_unlink (signal, path) {
-    this.ops.unlink(path, err => {
+  _op_unlink (signal, path, ctx) {
+    this.ops.unlink(path, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_rename (signal, src, dest) {
-    this.ops.rename(src, dest, err => {
+  _op_rename (signal, src, dest, ctx) {
+    this.ops.rename(src, dest, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_link (signal, src, dest) {
-    this.ops.link(src, dest, err => {
+  _op_link (signal, src, dest, ctx) {
+    this.ops.link(src, dest, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_symlink (signal, src, dest) {
-    this.ops.symlink(src, dest, err => {
+  _op_symlink (signal, src, dest, ctx) {
+    this.ops.symlink(src, dest, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_mkdir (signal, path, mode) {
-    this.ops.mkdir(path, mode, err => {
+  _op_mkdir (signal, path, mode, ctx) {
+    this.ops.mkdir(path, mode, { ctx }, err => {
       return signal(err)
     })
   }
 
-  _op_rmdir (signal, path) {
-    this.ops.rmdir(path, err => {
+  _op_rmdir (signal, path, ctx) {
+    this.ops.rmdir(path, { ctx }, err => {
       return signal(err)
     })
   }
