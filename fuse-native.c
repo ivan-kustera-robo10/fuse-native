@@ -46,15 +46,16 @@ napi_status napi_detach_arraybuffer(napi_env env, napi_value buf);
   static void fuse_native_dispatch_##name (uv_async_t* handle, fuse_thread_locals_t* l, fuse_thread_t* ft) {\
     uint32_t op = op_##name;\
     FUSE_NATIVE_CALLBACK(ft->handlers[op], {\
-      napi_value argv[callbackArgs + 2];\
+      napi_value argv[callbackArgs + 3];\
       napi_get_reference_value(env, l->self, &(argv[0]));\
       napi_create_uint32(env, l->op, &(argv[1]));\
+      ADD_CTX_OBJ(env, l, argv[callbackArgs + 2]); /* Insert ctx_obj as the last one */\
       callbackBlk\
-      NAPI_MAKE_CALLBACK(env, NULL, ctx, callback, callbackArgs + 2, argv, NULL)\
+      NAPI_MAKE_CALLBACK(env, NULL, ctx, callback, callbackArgs + 3, argv, NULL)\
     })\
   }\
   NAPI_METHOD(fuse_native_signal_##name) {\
-    NAPI_ARGV(signalArgs + 2)\
+    NAPI_ARGV(signalArgs + 3)\
     NAPI_ARGV_BUFFER_CAST(fuse_thread_locals_t *, l, 0);\
     NAPI_ARGV_INT32(res, 1);\
     signalBlk\
@@ -75,6 +76,14 @@ napi_status napi_detach_arraybuffer(napi_env env, napi_value buf);
   napi_create_uint32(env, low##pos, &(argv[pos]));\
   napi_create_uint32(env, high##pos, &(argv[pos + 1]));
 
+#define ADD_CTX_OBJ(env, l, ctx_obj_var)\
+  do {\
+    napi_status status = create_ctx_obj(env, l, &ctx_obj_var);\
+    if (status != napi_ok) {\
+        napi_throw_error(env, "ctx_obj Creation Failed", "Failed to create ctx_obj");\
+        return;\
+    }\
+  } while(0)
 
 // Opcodes
 
@@ -179,6 +188,11 @@ typedef struct {
   uv_sem_t sem;
   uv_async_t async;
 
+  // Fuse uid, gid, pid
+  uid_t ctx_uid;
+  gid_t ctx_gid;
+  pid_t ctx_pid;
+
 } fuse_thread_locals_t;
 
 static pthread_key_t thread_locals_key;
@@ -238,6 +252,35 @@ static void populate_statvfs (uint32_t *ints, struct statvfs* statvfs) {
   statvfs->f_fsid = *ints++;
   statvfs->f_flag = *ints++;
   statvfs->f_namemax = *ints++;
+}
+
+static napi_status create_ctx_obj(napi_env env, fuse_thread_locals_t *l, napi_value *ctx_obj) {
+    napi_status status;
+    napi_value tmp_obj, napi_uid, napi_gid, napi_pid;
+
+    status = napi_create_object(env, &tmp_obj);
+    if (status != napi_ok) return status;
+
+    status = napi_create_uint32(env, l->ctx_uid, &napi_uid);
+    if (status != napi_ok) return status;
+
+    status = napi_create_uint32(env, l->ctx_gid, &napi_gid);
+    if (status != napi_ok) return status;
+
+    status = napi_create_uint32(env, l->ctx_pid, &napi_pid);
+    if (status != napi_ok) return status;
+
+    status = napi_set_named_property(env, tmp_obj, "uid", napi_uid);
+    if (status != napi_ok) return status;
+
+    status = napi_set_named_property(env, tmp_obj, "gid", napi_gid);
+    if (status != napi_ok) return status;
+
+    status = napi_set_named_property(env, tmp_obj, "pid", napi_pid);
+    if (status != napi_ok) return status;
+
+    *ctx_obj = tmp_obj;
+    return napi_ok;
 }
 
 // Methods
@@ -760,6 +803,9 @@ static fuse_thread_locals_t* get_thread_locals () {
   void *data = pthread_getspecific(thread_locals_key);
 
   if (data != NULL) {
+    ((fuse_thread_locals_t *) data)->ctx_uid = ctx->uid;
+    ((fuse_thread_locals_t *) data)->ctx_gid = ctx->gid;
+    ((fuse_thread_locals_t *) data)->ctx_pid = ctx->pid;
     return (fuse_thread_locals_t *) data;
   }
 
@@ -775,6 +821,10 @@ static fuse_thread_locals_t* get_thread_locals () {
 
   pthread_setspecific(thread_locals_key, (void *) l);
   uv_mutex_unlock(&(ft->mut));
+
+  l->ctx_uid = ctx->uid;
+  l->ctx_gid = ctx->gid;
+  l->ctx_pid = ctx->pid;
 
   return l;
 }
