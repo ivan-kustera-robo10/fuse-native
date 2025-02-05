@@ -225,7 +225,7 @@ static void populate_stat (uint32_t *ints, struct stat* stat) {
   stat->st_size = uint32s_to_uint64(&ints);
   stat->st_dev = *ints++;
   stat->st_nlink = *ints++;
-  stat->st_ino = *ints++;
+  stat->st_ino = uint32s_to_uint64(&ints);
   stat->st_rdev = *ints++;
   stat->st_blksize = *ints++;
   stat->st_blocks = uint32s_to_uint64(&ints);

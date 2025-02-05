@@ -815,7 +815,7 @@ function toDateMS (st) {
 }
 
 function getStatArray (stat) {
-  const ints = new Uint32Array(18)
+  const ints = new Uint32Array(19)
 
   ints[0] = (stat && stat.mode) || 0
   ints[1] = (stat && stat.uid) || 0
@@ -823,13 +823,13 @@ function getStatArray (stat) {
   setDoubleInt(ints, 3, (stat && stat.size) || 0)
   ints[5] = (stat && stat.dev) || 0
   ints[6] = (stat && stat.nlink) || 1
-  ints[7] = (stat && stat.ino) || 0
-  ints[8] = (stat && stat.rdev) || 0
-  ints[9] = (stat && stat.blksize) || 0
-  setDoubleInt(ints, 10, (stat && stat.blocks) || 0)
-  setDoubleInt(ints, 12, toDateMS(stat && stat.atime))
-  setDoubleInt(ints, 14, toDateMS(stat && stat.mtime))
-  setDoubleInt(ints, 16, toDateMS(stat && stat.ctime))
+  setDoubleInt(ints, 7, (stat && stat.ino) || 0)
+  ints[9] = (stat && stat.rdev) || 0
+  ints[10] = (stat && stat.blksize) || 0
+  setDoubleInt(ints, 11, (stat && stat.blocks) || 0)
+  setDoubleInt(ints, 13, toDateMS(stat && stat.atime))
+  setDoubleInt(ints, 15, toDateMS(stat && stat.mtime))
+  setDoubleInt(ints, 17, toDateMS(stat && stat.ctime))
 
   return ints
 }
